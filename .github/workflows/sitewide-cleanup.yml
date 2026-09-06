@@ -1,0 +1,35 @@
+name: Sitewide cleanup
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Remove nonfunctional notices and footer disclaimer
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          for p in Path('.').glob('*.html'):
+              s=p.read_text(encoding='utf-8')
+              old=s
+              s=re.sub(r'<div class="notice safe-notice"[^>]*>Enrollment and payment buttons are functional navigation elements\. Live enrollment storage and card processing must be connected to secure services before accepting real learners or payments\.</div>\s*','',s)
+              s=s.replace(' Educational information on this site does not replace professional medical advice. Accreditation and partnership claims must be independently verified before publication.','')
+              s=s.replace('Educational information on this site does not replace professional medical advice. Accreditation and partnership claims must be independently verified before publication.','')
+              if s != old:
+                  p.write_text(s,encoding='utf-8')
+          PY
+      - name: Commit cleanup
+        run: |
+          git config user.name "icmt-edu"
+          git config user.email "doctor.ahmedomer@gmail.com"
+          git add '*.html'
+          if ! git diff --cached --quiet; then
+            git commit -m "Remove nonfunctional notices and footer disclaimer site-wide [skip ci]"
+            git push
+          fi
